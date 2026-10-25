@@ -159,12 +159,12 @@ function renderInlineUsageEditor(){
  const u={...(inlineUsageIndex>=0?(activeTool.usages||[])[inlineUsageIndex]||{}:{}),...(inlineUsageDraft||{})};
  inlineUsageDraft=null;
  const isMill=usageKind()==='mill';const isDrill=usageKind()==='drill';const isThread=usageKind()==='thread';
- el.innerHTML=`<div class="card" oninput="updateInlineUsageCalc(event)"><h3>${inlineUsageIndex>=0?'Modifica lavorazione':'Nuova lavorazione'}</h3>
+ el.innerHTML=`<div class="card" oninput="updateInlineUsageCalc(event);if(event.target.name==='iu_material')updateSmartToolHints()"><h3>${inlineUsageIndex>=0?'Modifica lavorazione':'Nuova lavorazione'}</h3>
  ${field('Nome lavorazione *','iu_title',u.title||'')}
  <label>Categoria lavorazione</label><select name="iu_usageCategory">${compatibleCategoryOptions(u.usageCategory)}</select>
  <label>Posizione lavorazione</label><select name="iu_workSide">${LIBRARY_SIDES.map(([v,l])=>`<option value="${v}" ${(u.workSide||activeTool.workSide)===v?'selected':''}>${l}</option>`).join('')}</select>
  ${isThread?`<label>Tipo di filetto</label><select name="iu_threadFamily"><option value="">Come utensile</option>${[['metric','Metrica ISO'],['tr','Trapezoidale ISO'],['rd','Tonda'],['bspp','GAS cilindrica'],['bspt','GAS conica'],['un','UN'],['acme','ACME'],['other','Altro']].map(([v,l])=>`<option value="${v}" ${u.threadFamily===v?'selected':''}>${l}</option>`).join('')}</select>${field('Passo filettatura (mm)','iu_pitch',u.pitch||activeTool.pitch,'number')}`:''}
- ${field('Materiale','iu_material',u.material)}${field('Macchina CNC','iu_machine',u.machine)}
+ ${field('Materiale','iu_material',u.material)}<div id="smartToolHints" class="card"></div>${field('Macchina CNC','iu_machine',u.machine)}
  ${field(usageDiameterLabel(),'iu_diameter',u.diameter,'number')}
  ${field('Velocità di taglio Vc (m/min)','iu_vc',u.vc,'number')}${field('Giri mandrino (rpm)','iu_rpm',u.rpm,'number')}
  ${isMill?`${field('Numero taglienti z','iu_teeth',u.teeth,'number')}${field('Avanzamento per dente fz (mm/dente)','iu_fz',u.fz,'number')}${field('Avanzamento Vf (mm/min)','iu_vf',u.vf,'number')}${field('Larghezza radiale ae (mm)','iu_ae',u.ae,'number')}`:field('Avanzamento f (mm/giro)','iu_feed',u.feed,'number')}
@@ -178,6 +178,47 @@ function renderInlineUsageEditor(){
  <button type="button" class="primary wide" onclick="saveInlineUsage()">✓ Memorizza lavorazione nella scheda</button>
  ${inlineUsageIndex>=0?'<button type="button" onclick="inlineUsageIndex=-1;renderInlineUsageEditor()">＋ Nuova lavorazione</button>':''}
  </div>`;
+ updateInlineUsageCalc();
+ updateSmartToolHints();
+}
+// v0.8.6: riferimenti del produttore separati dalle prove reali, per utensile e materiale.
+function materialKey(value){return String(value||'').trim().toLocaleLowerCase('it').replace(/\s+/g,' ')}
+function currentMaterial(){return inlineValue('material').trim()}
+function referenceForMaterial(){const k=materialKey(currentMaterial());return (activeTool.manufacturerRefs||[]).find(r=>materialKey(r.material)===k)}
+function updateSmartToolHints(){
+ const target=$('#smartToolHints');if(!target)return;
+ const material=currentMaterial();const key=materialKey(material);
+ if(!key){target.innerHTML='<strong>📚 Parametri per materiale</strong><p class="hint">Inserisci il materiale (es. C45) per vedere prove riuscite e valori del produttore.</p>';return}
+ const ref=referenceForMaterial();
+ const success=(activeTool.usages||[]).map((u,i)=>({u,i})).filter(({u,i})=>materialKey(u.material)===key&&u.outcome==='green'&&i!==inlineUsageIndex).reverse();
+ const isMill=activeTool.type==='Fresa';
+ const params=(v)=>['Vc '+(v.vc||'—')+' m/min',isMill?'fz '+(v.fz||'—')+' mm/dente':'f '+(v.feed||'—')+' mm/giro','ap '+(v.ap||'—')+' mm',isMill?'ae '+(v.ae||'—')+' mm':''].filter(Boolean).join(' · ');
+ target.innerHTML=`<strong>📚 Parametri per ${esc(material)}</strong><p class="hint">Dati del produttore e prove collaudate sono fonti diverse. Nessun parametro viene applicato senza conferma.</p>
+ <div class="card"><strong>🔵 Riferimento produttore</strong><p class="hint">Inserisci soltanto valori riportati su catalogo o confezione, non stime dell'app.</p>
+ ${field('Vc produttore (m/min)','ref_vc',ref?.vc||'','number')}
+ ${field(isMill?'fz produttore (mm/dente)':'f produttore (mm/giro)','ref_feed',isMill?ref?.fz||'':ref?.feed||'','number')}
+ ${field('ap produttore (mm)','ref_ap',ref?.ap||'','number')}
+ ${isMill?field('ae produttore (mm)','ref_ae',ref?.ae||'','number'):''}
+ ${field('Fonte / catalogo produttore','ref_source',ref?.source||'')}
+ <button type="button" onclick="saveManufacturerReference()">💾 Salva riferimento produttore</button>
+ ${ref?`<p class="hint">${esc(params(ref))} · Fonte: ${esc(ref.source||'non specificata')}</p><button type="button" onclick="applySmartParams('manufacturer')">Usa valori produttore</button>`:''}</div>
+ <div class="card"><strong>🟢 Lavorazioni collaudate (${success.length})</strong>${success.slice(0,5).map(({u,i})=>`<p><strong>${esc(u.title||'Lavorazione')}</strong><br><small>${esc(params(u))}</small><br><button type="button" onclick="applySmartParams('usage',${i})">Usa questi parametri</button></p>`).join('')||'<p class="hint">Nessuna prova con esito verde per questo utensile e materiale.</p>'}</div>`;
+}
+async function saveManufacturerReference(){
+ const material=currentMaterial();if(!material)return alert('Inserisci prima il materiale.');
+ const box=$('#smartToolHints');const val=k=>box.querySelector('[name="ref_'+k+'"]')?.value.trim()||'';
+ const source=val('source');if(!source)return alert('Indica la fonte del produttore.');
+ const data={material,vc:val('vc'),feed:activeTool.type==='Fresa'?'':val('feed'),fz:activeTool.type==='Fresa'?val('feed'):'',ap:val('ap'),ae:val('ae'),source};
+ if(!data.vc&&!data.feed&&!data.fz&&!data.ap&&!data.ae)return alert('Inserisci almeno un parametro.');
+ preserveToolForm();activeTool.manufacturerRefs||=[];
+ activeTool.manufacturerRefs=activeTool.manufacturerRefs.filter(r=>materialKey(r.material)!==materialKey(material));activeTool.manufacturerRefs.push(data);
+ try{await putTool({...activeTool,photos:toolPhotos,saved:true});activeTool.saved=true;updateSmartToolHints();alert('Riferimento produttore salvato.')}catch(e){alert('Salvataggio non riuscito: '+e.message)}
+}
+function applySmartParams(kind,index){
+ const data=kind==='manufacturer'?referenceForMaterial():activeTool.usages?.[index];if(!data)return;
+ if(!confirm('Copiare i parametri selezionati nella lavorazione corrente? I dati già inseriti nei campi corrispondenti saranno sostituiti.'))return;
+ const keys=['vc','feed','fz','ap','ae'];for(const k of keys){const el=$('#inlineUsageEditor [name="iu_'+k+'"]');if(el&&data[k]!==undefined&&data[k]!==null&&data[k]!=='')el.value=data[k]}
+ const rpm=$('#inlineUsageEditor [name="iu_rpm"]'),vf=$('#inlineUsageEditor [name="iu_vf"]');if(rpm){rpm.value='';rpm.dataset.manual='no'}if(vf){vf.value='';vf.dataset.manual='no'}
  updateInlineUsageCalc();
 }
 function updateInlineUsageCalc(e){

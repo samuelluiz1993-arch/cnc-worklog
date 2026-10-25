@@ -1,3 +1,1 @@
-CNC WorkLog v0.8.5
-Corretto aggiornamento immediato categoria utensile nella scheda, filtro lavorazioni e parametri pertinenti.
-Prima di aggiornare, esportare un backup. Non cancellare i dati del browser.
+CNC WorkLog v0.8.6 — parametri produttore per materiale e recupero lavorazioni collaudate.\nBackup consigliato prima di aggiornare.\n
