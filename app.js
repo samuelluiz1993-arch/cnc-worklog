@@ -141,7 +141,7 @@ function renderInlineUsageEditor(){
  const el=$('#inlineUsageEditor');if(!el)return;
  const u=inlineUsageIndex>=0?(activeTool.usages||[])[inlineUsageIndex]||{}:{};
  const isMill=activeTool.type==='Fresa';const isThread=/filettatura/i.test(activeTool.type||'');
- el.innerHTML=`<div class="card"><h3>${inlineUsageIndex>=0?'Modifica lavorazione':'Nuova lavorazione'}</h3>
+ el.innerHTML=`<div class="card" oninput="updateInlineUsageCalc(event)"><h3>${inlineUsageIndex>=0?'Modifica lavorazione':'Nuova lavorazione'}</h3>
  ${field('Nome lavorazione *','iu_title',u.title||'')}
  <label>Categoria lavorazione</label><select name="iu_usageCategory">${categoryOptions(u.usageCategory)}</select>
  <label>Posizione lavorazione</label><select name="iu_workSide">${LIBRARY_SIDES.map(([v,l])=>`<option value="${v}" ${(u.workSide||activeTool.workSide)===v?'selected':''}>${l}</option>`).join('')}</select>
@@ -154,12 +154,30 @@ function renderInlineUsageEditor(){
  ${isThread?field('Angolo sottoplacchetta (°)','iu_shimAngle',u.shimAngle,'number'):''}
  ${choice('Refrigerazione utilizzata','iu_coolant',u.coolant,COOL)}${field('Pressione refrigerante (bar)','iu_coolantPressure',u.coolantPressure,'number')}
  ${choice('Esito (semaforo)','iu_outcome',u.outcome,LIGHTS)}
- ${field('Quota nominale (mm)','iu_nominalSize',u.nominalSize,'number')}${field('Quota misurata (mm)','iu_measuredSize',u.measuredSize,'number')}${field('Scostamento dimensionale (mm)','iu_sizeDeviation',u.sizeDeviation,'number')}${textfield('Note sulla misura','iu_sizeNotes',u.sizeNotes)}
+ ${field('Quota nominale (mm)','iu_nominalSize',u.nominalSize,'number')}${field('Quota misurata (mm)','iu_measuredSize',u.measuredSize,'number')}${field('Scostamento dimensionale (mm)','iu_sizeDeviation',u.sizeDeviation,'number')}<small id="inlineDeviationHint" class="hint">Scostamento = quota misurata − quota nominale</small>${textfield('Note sulla misura','iu_sizeNotes',u.sizeNotes)}
  ${textfield('Descrizione e risultato ottenuto','iu_description',u.description)}${textfield('Accorgimenti e parametri riusciti','iu_tips',u.tips)}
  <label>Foto lavorazione</label><input type="file" accept="image/*" multiple onchange="inlineUsagePhotos(event)">${photoView(u.photos||[])}
  <button type="button" class="primary wide" onclick="saveInlineUsage()">✓ Memorizza lavorazione nella scheda</button>
  ${inlineUsageIndex>=0?'<button type="button" onclick="inlineUsageIndex=-1;renderInlineUsageEditor()">＋ Nuova lavorazione</button>':''}
  </div>`;
+ updateInlineUsageCalc();
+}
+function updateInlineUsageCalc(e){
+ const box=$('#inlineUsageEditor');if(!box)return;
+ const input=k=>box.querySelector('[name="iu_'+k+'"]');
+ const num=k=>{const v=(input(k)?.value||'').trim().replace(',','.').replace('−','-');return v===''?NaN:Number(v)};
+ const d=num('diameter'),vc=num('vc'),n=d>0&&vc>0?1000*vc/(Math.PI*d):NaN;
+ const rpm=input('rpm'),vf=input('vf'),dev=input('sizeDeviation');
+ const changed=e?.target?.name||'';
+ if(changed==='iu_rpm'&&rpm)rpm.dataset.manual=rpm.value.trim()?'yes':'no';
+ if(changed==='iu_vf'&&vf)vf.dataset.manual=vf.value.trim()?'yes':'no';
+ if(changed==='iu_sizeDeviation'&&dev)dev.dataset.manual=dev.value.trim()?'yes':'no';
+ if(rpm&&Number.isFinite(n)&&rpm.dataset.manual!=='yes'&&(changed!=='init'||!rpm.value.trim()))rpm.value=String(Math.round(n));
+ const z=num('teeth'),fz=num('fz');const calculatedVf=Number.isFinite(n)&&z>0&&fz>0?n*z*fz:NaN;
+ if(vf&&Number.isFinite(calculatedVf)&&vf.dataset.manual!=='yes'&&(changed!=='init'||!vf.value.trim()))vf.value=calculatedVf.toFixed(1);
+ const a=num('nominalSize'),b=num('measuredSize');const delta=Number.isFinite(a)&&Number.isFinite(b)?b-a:NaN;
+ if(dev&&Number.isFinite(delta)&&dev.dataset.manual!=='yes'&&(changed!=='init'||!dev.value.trim()))dev.value=String(Number(delta.toFixed(4)));
+ const hint=$('#inlineDeviationHint');if(hint)hint.textContent=Number.isFinite(delta)?'Scostamento calcolato: '+(delta>=0?'+':'')+delta.toFixed(3).replace('.',',')+' mm (misurata − nominale)':'Scostamento = quota misurata − quota nominale';
 }
 function inlineValue(k){return $('#inlineUsageEditor [name=iu_'+k+']')?.value||''}
 function saveInlineUsage(){

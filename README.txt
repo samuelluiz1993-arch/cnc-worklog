@@ -1,2 +1,3 @@
-CNC WorkLog v0.8.1
-Scheda utensile: editor integrato dei parametri di lavorazione per fresatura, tornitura, alesatura, foratura e filettatura. Le lavorazioni rimangono collegate al singolo utensile, con foto e storico. Eseguire un backup prima dell'aggiornamento.
+CNC WorkLog v0.8.2
+Correzione calcoli automatici nella scheda utensile: giri mandrino, avanzamento Vf in fresatura, scostamento dimensionale.
+Prima di aggiornare, esportare un backup dall’app.
