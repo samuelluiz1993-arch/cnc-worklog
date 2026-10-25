@@ -1,1 +1,2 @@
-CNC WorkLog v0.8.6 — parametri produttore per materiale e recupero lavorazioni collaudate.\nBackup consigliato prima di aggiornare.\n
+CNC WorkLog v0.8.7 — parametri del produttore sempre visibili nella scheda utensile, indipendenti dalle lavorazioni.
+Esporta un backup prima di aggiornare.
