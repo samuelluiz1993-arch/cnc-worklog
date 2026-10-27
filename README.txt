@@ -1,3 +1,1 @@
-CNC WorkLog v0.8.9
-Modulo lavorazioni collaudate a comparsa. Elenco storico invariato.
-Prima dell’aggiornamento esportare un backup.
+CNC WorkLog 0.9.0 — Aggiornamenti e cache. Caricare tutti i file nella root del repository GitHub Pages, incluso version.json. Eseguire un backup prima di aggiornare. I dati restano in IndexedDB nel browser.
