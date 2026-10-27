@@ -14,3 +14,21 @@
 .source-job{background:#17364d;border-color:#397da5;color:#bfeaff}
 
 .iso-materials{border:1px solid #34506a;border-radius:12px;margin:18px 0;padding:12px}.iso-materials legend{padding:0 7px;font-weight:700}.iso-choice{display:flex;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid #274157;cursor:pointer}.iso-choice:last-of-type{border-bottom:0}.iso-choice input{width:22px;height:22px;flex-shrink:0;accent-color:#4da3ff}.iso-choice span{flex:1}
+
+/* v0.9.1: dati utensile compatti e modificabili solo su richiesta */
+.tool-overview h2{margin:2px 0 14px;overflow-wrap:anywhere}
+.tool-detail-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
+.tool-detail-row>span{color:var(--muted);flex:0 0 38%}
+.tool-detail-row>strong{text-align:right;font-weight:600;overflow-wrap:anywhere;min-width:0}
+.tool-detail-row:has(.iso-pills){display:block}
+.tool-detail-row:has(.iso-pills)>span{display:block;margin-bottom:9px}
+.iso-pills{display:flex;flex-wrap:wrap;gap:7px}
+.iso-pill{padding:6px 9px;border:1px solid var(--border);border-radius:18px;font-size:12px;background:var(--bg)}
+.tool-summary-notes{white-space:pre-wrap;overflow-wrap:anywhere}
+.iso-materials{padding:10px}
+.iso-materials .iso-choice{padding:8px 4px;margin:0;font-size:12px;gap:7px}
+.iso-materials .iso-choice input{width:20px;height:20px;min-height:20px}
+.iso-materials .iso-choice span{font-size:12px}
+.iso-materials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px}
+.iso-materials legend,.iso-materials>.hint{grid-column:1/-1}
+.iso-materials .iso-choice{border-bottom:1px solid var(--border)}

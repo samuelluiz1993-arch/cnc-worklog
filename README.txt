@@ -1,1 +1,3 @@
-CNC WorkLog 0.9.0 — Aggiornamenti e cache. Caricare tutti i file nella root del repository GitHub Pages, incluso version.json. Eseguire un backup prima di aggiornare. I dati restano in IndexedDB nel browser.
+CNC WorkLog v0.9.1
+Scheda utensile compatta con pulsante Modifica, Salva e Annulla; gruppi ISO in griglia. Conserva IndexedDB e le funzioni di v0.9.0.
+Estrarre e caricare tutti i file nella radice del repository GitHub Pages. Esportare un backup prima di aggiornare.
