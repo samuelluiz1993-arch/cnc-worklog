@@ -1,2 +1,3 @@
-CNC WorkLog v0.9.6
-Correzione libreria: le categorie Scanalatura interna/esterna non vengono piu mostrate sotto Sgrossatura o Finitura per effetto delle vecchie lavorazioni. Dati esistenti invariati.
+CNC WorkLog v0.9.7
+Aggiunto il pulsante per eliminare una lavorazione collaudata esistente, con conferma e salvataggio immediato.
+Eseguire un backup JSON prima di aggiornare.

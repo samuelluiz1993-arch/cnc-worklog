@@ -1,6 +1,6 @@
 // Cache soltanto delle risorse statiche. La rete ha priorità sugli aggiornamenti.
-const CACHE='cnc-worklog-v0.9.6';
-const ASSETS=['./index.html?v=096','./style.css?v=096','./app.js?v=096','./manifest.webmanifest','./icon.svg'];
+const CACHE='cnc-worklog-v0.9.7';
+const ASSETS=['./index.html?v=097','./style.css?v=097','./app.js?v=097','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>e.waitUntil((async()=>{for(const k of await caches.keys())if(k.startsWith('cnc-worklog-')&&k!==CACHE)await caches.delete(k);await self.clients.claim()})()));
 self.addEventListener('fetch',e=>{const r=e.request,u=new URL(r.url);if(r.method!=='GET'||u.origin!==self.location.origin)return;
