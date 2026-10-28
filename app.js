@@ -78,6 +78,10 @@ const LIBRARY_SIDES=[['','— Non specificata —'],['esterna','Esterna'],['inte
 function libraryGroupsForTool(t){
  const groups=new Set();
  const toolCategory=String(t.type||'').toLocaleLowerCase('it');
+ // Le categorie specifiche di scanalatura prevalgono sulle vecchie lavorazioni
+ // (ad es. sgrossatura/finitura) registrate prima della riclassificazione.
+ if(toolCategory==='scanalatura interna')return ['Scanalatura interna'];
+ if(toolCategory==='scanalatura esterna')return ['Scanalatura esterna'];
  if(toolCategory.includes('filettatura interna'))groups.add('Filettatura interna');
  if(toolCategory.includes('filettatura esterna'))groups.add('Filettatura esterna');
  if(toolCategory.includes('scanalatura interna'))groups.add('Scanalatura interna');
