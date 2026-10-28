@@ -32,3 +32,13 @@
 .iso-materials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px}
 .iso-materials legend,.iso-materials>.hint{grid-column:1/-1}
 .iso-materials .iso-choice{border-bottom:1px solid var(--border)}
+
+/* v0.10.0: scheda pezzo in sola lettura e foto ingrandite */
+.job-view-detail{padding:10px 0;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;overflow-wrap:anywhere}
+.job-view-detail:last-child{border-bottom:0}
+.job-view-detail span{color:var(--muted);font-size:13px}
+.job-view-detail strong{font-size:16px;font-weight:500;white-space:pre-wrap}
+.job-photos{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0}
+.job-photos img{display:block;width:min(100%,340px);height:auto;max-height:360px;object-fit:contain;border-radius:13px;background:var(--bg);border:1px solid var(--border)}
+.job-operation-info{color:var(--muted);font-size:14px;margin-top:8px;line-height:1.6}
+.job-operation{border-left:4px solid var(--blue)}
