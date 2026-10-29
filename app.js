@@ -227,6 +227,36 @@ function onToolCategoryChange(){
  renderInlineUsageEditor();
 }
 let inlineUsageDraft=null;
+// TR: valori teorici separati dai parametri realmente collaudati.
+const TR_KEYS=['trDesignation','trNominal','trPitch','trBore','trMajor','trHand','trProfile','trBarDiameter','trOverhang','trInsert','trPenetration','trAngle','trPasses','trLastCount','trLastDepth','trSpring','trFirst','trActualPasses','trVibration','trChips','trTroubleSolution','trCalculatedPlan'];
+function trNum(value){const x=String(value??'').trim().replace(',','.');return x===''?NaN:Number(x)}
+function trIsActive(u){return /filettatura/i.test(activeTool?.type||'')&&((u.threadFamily||activeTool.threadFamily)==='tr'||/\btr\s*\d/i.test(u.title||''))}
+function trField(label,key,value){return field(label,'iu_'+key,value,'number')}
+function trEditor(u){const f=(label,key)=>trField(label,key,u[key]);return `<div class="card" id="trModule"><h3>🔩 Filettatura trapezoidale ISO</h3><p class="hint">Dati della filettatura e passate reali. I suggerimenti sono solo teorici e vanno verificati in macchina.</p>
+${field('Designazione (es. TR95x16)','iu_trDesignation',u.trDesignation)}${f('Diametro nominale (mm)','trNominal')}${f('Passo P (mm)','trPitch')}${f('Diametro preforo effettivo (mm)','trBore')}${f('Diametro maggiore interno da raggiungere (mm)','trMajor')}
+<label>Verso filetto</label><select name="iu_trHand"><option value="">—</option><option value="DX" ${u.trHand==='DX'?'selected':''}>Destra</option><option value="SX" ${u.trHand==='SX'?'selected':''}>Sinistra</option></select>
+${f('Angolo profilo (°)','trProfile')}${f('Diametro bareno (mm)','trBarDiameter')}${f('Sporgenza bareno (mm)','trOverhang')}<div class="stat" id="trLD">Rapporto L/D: —</div>
+${field('Tipo inserto (profilo completo / parziale)','iu_trInsert',u.trInsert)}<label>Penetrazione</label><select name="iu_trPenetration"><option value="">—</option><option value="radiale" ${u.trPenetration==='radiale'?'selected':''}>Radiale</option><option value="inclinata" ${u.trPenetration==='inclinata'?'selected':''}>Inclinata</option></select>${f('Angolo di penetrazione (°)','trAngle')}
+<h3>🧮 Calcolatore passate (teorico)</h3><p class="hint">Calcola la penetrazione radiale totale da diametro maggiore interno e preforo. Le passate proposte sono decrescenti; le ultime passate possono essere fissate.</p>
+${f('Numero passate di taglio','trPasses')}${f('Numero ultime passate fisse','trLastCount')}${f('Profondità radiale ultime passate (mm)','trLastDepth')}${f('Profondità prima passata (mm, facoltativa)','trFirst')}${f('Passate a vuoto (non asportano)','trSpring')}
+<button type="button" onclick="calculateTrPasses()">🧮 Calcola distribuzione passate</button><div id="trPlanOutput" class="card" aria-live="polite"></div>
+${textfield('Passate realmente eseguite (es. 0,8; 0,6; 0,4...)','iu_trActualPasses',u.trActualPasses)}
+<label>Vibrazioni</label><select name="iu_trVibration">${[['','—'],['assenti','🟢 Assenti'],['leggere','🟡 Leggere'],['elevate','🔴 Elevate']].map(([v,l])=>`<option value="${v}" ${u.trVibration===v?'selected':''}>${l}</option>`).join('')}</select>
+<label>Evacuazione truciolo</label><select name="iu_trChips">${[['','—'],['buona','🟢 Buona'],['difficoltosa','🟡 Difficoltosa'],['problematica','🔴 Problematica']].map(([v,l])=>`<option value="${v}" ${u.trChips===v?'selected':''}>${l}</option>`).join('')}</select>
+${textfield('Problemi riscontrati e soluzione adottata','iu_trTroubleSolution',u.trTroubleSolution)}<input type="hidden" name="iu_trCalculatedPlan" value="${esc(u.trCalculatedPlan||'')}"><p class="hint">La proposta calcolata è archiviata separatamente dalle passate effettive.</p></div>`}
+function updateTrGeometry(){const box=$('#trModule');if(!box)return;const get=k=>trNum(box.querySelector('[name=iu_'+k+']')?.value);const d=get('trBarDiameter'),l=get('trOverhang'),ld=$('#trLD');if(ld)ld.textContent='Rapporto L/D: '+(d>0&&l>=0?(l/d).toFixed(2):'—')+' (indicatore geometrico, non verifica di stabilità)';}
+function calculateTrPasses(){const box=$('#trModule');if(!box)return;const read=k=>trNum(box.querySelector('[name=iu_'+k+']')?.value);const out=$('#trPlanOutput');const major=read('trMajor'),bore=read('trBore'),count=read('trPasses'),fixedCount=read('trLastCount'),fixedDepth=read('trLastDepth'),first=read('trFirst');const fixed=Number.isFinite(fixedCount)?fixedCount:0;const depth=Number.isFinite(fixedDepth)?fixedDepth:0;
+ const error=m=>{out.textContent=m;box.querySelector('[name=iu_trCalculatedPlan]').value=''};
+ if(!(major>bore&&bore>0))return error('Inserisci il diametro preforo e il diametro maggiore interno effettivo (maggiore del preforo).');
+ if(!Number.isInteger(count)||count<1||count>200)return error('Inserisci un numero di passate compreso tra 1 e 200.');
+ if(!Number.isInteger(fixed)||fixed<0||fixed>count||depth<0||fixed>0&&depth<=0)return error('Controlla il numero e la profondità delle passate finali.');
+ const total=(major-bore)/2,remaining=total-fixed*depth,free=count-fixed;
+ if(remaining< -1e-8||free===0&&Math.abs(remaining)>1e-8||free>0&&remaining<=0)return error('Le passate fisse superano la profondità disponibile o non lasciano materiale per le altre passate.');
+ let passes=[];
+ if(free>0){let weights=Array.from({length:free},(_,i)=>Math.sqrt(free-i));if(Number.isFinite(first)&&first>0){if(free===1){if(Math.abs(first-remaining)>0.0001)return error('Con una sola passata libera la prima profondità deve coincidere con il materiale residuo.');weights=[remaining]}else{if(first>=remaining)return error('La prima passata deve essere minore della profondità residua.');weights=[first,...weights.slice(1).map(w=>w/weights.slice(1).reduce((a,b)=>a+b,0)*(remaining-first))];if(weights[1]>first+1e-8)return error('Prima passata troppo piccola per mantenere una sequenza decrescente.')}}else{const sum=weights.reduce((a,b)=>a+b,0);weights=weights.map(w=>w*remaining/sum)}passes=weights;}
+ passes.push(...Array(fixed).fill(depth));let cum=0;const rows=passes.map((v,i)=>{cum+=v;return `<tr><td>${i+1}</td><td>${v.toFixed(3)}</td><td>${cum.toFixed(3)}</td></tr>`}).join('');const spring=read('trSpring');const txt=`Totale radiale: ${total.toFixed(3)} mm; passate: ${passes.map(v=>v.toFixed(3)).join('; ')} mm${spring>0?`; passate a vuoto: ${spring}`:''}`;
+ out.innerHTML=`<strong>🔵 Proposta teorica · ${total.toFixed(3)} mm radiali</strong><div style="overflow-x:auto"><table><thead><tr><th>N.</th><th>ap radiale (mm)</th><th>Cumulata (mm)</th></tr></thead><tbody>${rows}</tbody></table></div><p class="hint">Non è una raccomandazione di taglio validata: verificare geometria, inserto, carico e rigidità.</p>`;box.querySelector('[name=iu_trCalculatedPlan]').value=txt;
+}
 function renderInlineUsageEditor(){
  // Evita di utilizzare la vecchia categoria in memoria.
  const category=$('#toolForm [name=type]')?.value;
@@ -236,15 +266,15 @@ function renderInlineUsageEditor(){
  if(inlineUsageReadOnly && inlineUsageIndex>=0){
   const u=(activeTool.usages||[])[inlineUsageIndex];
   if(!u){closeInlineUsageEditor();return;}
-  const labels={title:'Nome lavorazione',usageCategory:'Categoria lavorazione',workSide:'Posizione lavorazione',threadFamily:'Tipo di filetto',pitch:'Passo filettatura (mm)',material:'Materiale',machine:'Macchina CNC',diameter:usageDiameterLabel(),vc:'Velocità di taglio Vc (m/min)',rpm:'Giri mandrino (rpm)',teeth:'Numero taglienti z',fz:'Avanzamento per dente fz (mm/dente)',vf:'Avanzamento Vf (mm/min)',ae:'Larghezza radiale ae (mm)',feed:'Avanzamento f (mm/giro)',ap:usageApLabel(),length:'Lunghezza lavorata (mm)',shimAngle:'Angolo sottoplacchetta (°)',coolant:'Refrigerazione utilizzata',coolantPressure:'Pressione refrigerante (bar)',outcome:'Esito lavorazione',nominalSize:'Quota nominale (mm)',measuredSize:'Quota misurata (mm)',sizeDeviation:'Scostamento dimensionale (mm)',sizeNotes:'Note sulla misura',description:'Descrizione e risultato ottenuto',tips:'Accorgimenti e parametri riusciti'};
-  const sections=[['Dati lavorazione',['title','usageCategory','workSide','threadFamily','pitch','material','machine']],['Parametri di taglio',['diameter','vc','rpm','teeth','fz','vf','ae','feed','ap','length','shimAngle','coolant','coolantPressure']],['Risultato e misure',['outcome','nominalSize','measuredSize','sizeDeviation','sizeNotes','description','tips']]];
+  const labels={title:'Nome lavorazione',usageCategory:'Categoria lavorazione',workSide:'Posizione lavorazione',threadFamily:'Tipo di filetto',pitch:'Passo filettatura (mm)',material:'Materiale',machine:'Macchina CNC',diameter:usageDiameterLabel(),vc:'Velocità di taglio Vc (m/min)',rpm:'Giri mandrino (rpm)',teeth:'Numero taglienti z',fz:'Avanzamento per dente fz (mm/dente)',vf:'Avanzamento Vf (mm/min)',ae:'Larghezza radiale ae (mm)',feed:'Avanzamento f (mm/giro)',ap:usageApLabel(),length:'Lunghezza lavorata (mm)',shimAngle:'Angolo sottoplacchetta (°)',coolant:'Refrigerazione utilizzata',coolantPressure:'Pressione refrigerante (bar)',outcome:'Esito lavorazione',nominalSize:'Quota nominale (mm)',measuredSize:'Quota misurata (mm)',sizeDeviation:'Scostamento dimensionale (mm)',sizeNotes:'Note sulla misura',description:'Descrizione e risultato ottenuto',tips:'Accorgimenti e parametri riusciti',trDesignation:'Designazione TR',trNominal:'Diametro nominale (mm)',trPitch:'Passo TR (mm)',trBore:'Preforo (mm)',trMajor:'Diametro maggiore interno (mm)',trHand:'Verso filettatura',trProfile:'Angolo profilo (°)',trBarDiameter:'Diametro bareno (mm)',trOverhang:'Sporgenza bareno (mm)',trInsert:'Inserto',trPenetration:'Penetrazione',trAngle:'Angolo penetrazione (°)',trPasses:'Numero passate',trLastCount:'Ultime passate fisse',trLastDepth:'Profondità ultime passate (mm)',trFirst:'Prima passata (mm)',trSpring:'Passate a vuoto',trActualPasses:'Passate realmente eseguite',trCalculatedPlan:'Piano teorico calcolato',trVibration:'Vibrazioni',trChips:'Evacuazione truciolo',trTroubleSolution:'Problemi e soluzioni'};
+  const sections=[['Dati lavorazione',['title','usageCategory','workSide','threadFamily','pitch','material','machine']],['Parametri di taglio',['diameter','vc','rpm','teeth','fz','vf','ae','feed','ap','length','shimAngle','coolant','coolantPressure',...TR_KEYS]],['Risultato e misure',['outcome','nominalSize','measuredSize','sizeDeviation','sizeNotes','description','tips']]];
   el.innerHTML=`<div class="card"><h3>📋 ${esc(u.title||'Lavorazione collaudata')}</h3><p class="hint">Visualizzazione in sola lettura. Premi «Modifica lavorazione» per cambiare i dati.</p>${sections.map(([heading,keys])=>`<div class="card"><h3>${heading}</h3>${keys.filter(k=>u[k]!==undefined&&u[k]!==null&&String(u[k]).trim()!=='').map(k=>`<div style="margin:12px 0"><small class="muted">${esc(labels[k])}</small><div style="white-space:pre-wrap;overflow-wrap:anywhere">${k==='outcome'?`<span aria-label="${esc(({green:'Riuscita',yellow:'Da ottimizzare',red:'Problematica'})[u[k]]||'Non valutata')}" title="${esc(({green:'Riuscita',yellow:'Da ottimizzare',red:'Problematica'})[u[k]]||'Non valutata')}" style="font-size:1.6rem">${lightIcon(u[k])}</span>`:esc(String(u[k]))}</div></div>`).join('')||'<p class="hint">Nessun dato registrato.</p>'}</div>`).join('')}${u.photos?.length?`<div class="card"><h3>Foto lavorazione</h3>${photoView(u.photos)}</div>`:''}<button type="button" class="primary wide" onclick="enableInlineUsageEdit()">✏️ Modifica lavorazione</button><button type="button" class="wide" onclick="closeInlineUsageEditor()">Chiudi</button></div>`;
   return;
  }
  const u={...(inlineUsageIndex>=0?(activeTool.usages||[])[inlineUsageIndex]||{}:{}),...(inlineUsageDraft||{})};
  inlineUsageDraft=null;
  const isMill=usageKind()==='mill';const isDrill=usageKind()==='drill';const isThread=usageKind()==='thread';
- el.innerHTML=`<div class="card" oninput="updateInlineUsageCalc(event);if(event.target.name==='iu_material')updateSmartToolHints()"><h3>${inlineUsageIndex>=0?'Modifica lavorazione':'Nuova lavorazione'}</h3>
+ el.innerHTML=`<div class="card" oninput="updateInlineUsageCalc(event);updateTrGeometry();if(event.target.name==='iu_material')updateSmartToolHints()"><h3>${inlineUsageIndex>=0?'Modifica lavorazione':'Nuova lavorazione'}</h3>
  ${field('Nome lavorazione *','iu_title',u.title||'')}
  <label>Categoria lavorazione</label><select name="iu_usageCategory">${compatibleCategoryOptions(u.usageCategory)}</select>
  <label>Posizione lavorazione</label><select name="iu_workSide">${LIBRARY_SIDES.map(([v,l])=>`<option value="${v}" ${(u.workSide||activeTool.workSide)===v?'selected':''}>${l}</option>`).join('')}</select>
@@ -254,7 +284,7 @@ function renderInlineUsageEditor(){
  ${field('Velocità di taglio Vc (m/min)','iu_vc',u.vc,'number')}${field('Giri mandrino (rpm)','iu_rpm',u.rpm,'number')}
  ${isMill?`${field('Numero taglienti z','iu_teeth',u.teeth,'number')}${field('Avanzamento per dente fz (mm/dente)','iu_fz',u.fz,'number')}${field('Avanzamento Vf (mm/min)','iu_vf',u.vf,'number')}${field('Larghezza radiale ae (mm)','iu_ae',u.ae,'number')}`:field('Avanzamento f (mm/giro)','iu_feed',u.feed,'number')}
  ${field(usageApLabel(),'iu_ap',u.ap,'number')}${isDrill?'':field('Lunghezza lavorata (mm)','iu_length',u.length,'number')}
- ${isThread?field('Angolo sottoplacchetta (°)','iu_shimAngle',u.shimAngle,'number'):''}
+ ${isThread?field('Angolo sottoplacchetta (°)','iu_shimAngle',u.shimAngle,'number'):''}${isThread&&trIsActive(u)?trEditor(u):''}
  ${choice('Refrigerazione utilizzata','iu_coolant',u.coolant,COOL)}${field('Pressione refrigerante (bar)','iu_coolantPressure',u.coolantPressure,'number')}
  ${choice('Esito (semaforo)','iu_outcome',u.outcome,LIGHTS)}
  ${field('Quota nominale (mm)','iu_nominalSize',u.nominalSize,'number')}${field('Quota misurata (mm)','iu_measuredSize',u.measuredSize,'number')}${field('Scostamento dimensionale (mm)','iu_sizeDeviation',u.sizeDeviation,'number')}<small id="inlineDeviationHint" class="hint">Scostamento = quota misurata − quota nominale</small>${textfield('Note sulla misura','iu_sizeNotes',u.sizeNotes)}
@@ -265,6 +295,7 @@ function renderInlineUsageEditor(){
  ${inlineUsageIndex>=0?`<button type="button" class="danger wide" onclick="deleteInlineUsage()">🗑 Elimina questa lavorazione</button>`:''}
  </div>`;
  updateInlineUsageCalc();
+ updateTrGeometry();
  updateSmartToolHints();
 }
 // v0.8.6: riferimenti del produttore separati dalle prove reali, per utensile e materiale.
@@ -363,7 +394,7 @@ function saveInlineUsage(){
  preserveToolForm();
  const category=inlineValue('usageCategory');if(inlineUsageIndex<0&&category&&!allowedUsageCategories().includes(category))return alert('Lavorazione non compatibile con questo utensile.');
  preserveToolForm();const previous=inlineUsageIndex>=0?activeTool.usages[inlineUsageIndex]:{};
- const u={...previous};for(const k of ['title','usageCategory','workSide','threadFamily','pitch','material','machine','diameter','vc','rpm','teeth','fz','vf','ae','feed','ap','length','shimAngle','coolant','coolantPressure','outcome','nominalSize','measuredSize','sizeDeviation','sizeNotes','description','tips']){
+ const u={...previous};for(const k of ['title','usageCategory','workSide','threadFamily','pitch','material','machine','diameter','vc','rpm','teeth','fz','vf','ae','feed','ap','length','shimAngle','coolant','coolantPressure','outcome','nominalSize','measuredSize','sizeDeviation','sizeNotes','description','tips',...TR_KEYS]){
  const el=$('#inlineUsageEditor [name=iu_'+k+']');if(el)u[k]=el.value;
  }
  if(inlineUsageIndex<0){activeTool.usages.push(u);inlineUsageIndex=activeTool.usages.length-1}else activeTool.usages[inlineUsageIndex]=u;
