@@ -1,3 +1,1 @@
-CNC WorkLog v0.10.2
-Filettatura trapezoidale: dati geometrici, bareno, passate reali e calcolatore teorico delle passate.
-Aggiornare senza cancellare i dati del browser. Prima esportare backup JSON.
+CNC WorkLog v0.10.4 — Magazzino griffe: elenco con tutte le informazioni visibili (misure, presa, macchina, stato, posizione, note e foto). Conserva i dati IndexedDB e le funzioni precedenti. Prima di aggiornare esporta un backup JSON.

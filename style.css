@@ -45,3 +45,24 @@
 
 /* v0.10.3 Magazzino griffe */
 .jaw-photo{display:block;width:min(100%,340px);height:auto;max-height:360px;object-fit:contain;border-radius:12px;margin:12px 0;border:1px solid var(--border)}
+
+/* Magazzino griffe: informazioni complete direttamente nell'elenco */
+.jaw-list-card{display:block;width:100%;text-align:left;cursor:pointer;padding:18px;margin:14px 0;white-space:normal;}
+.jaw-list-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;}
+.jaw-list-title{display:flex;flex-direction:column;gap:5px;min-width:0;}
+.jaw-list-title>strong{font-size:1.2rem;overflow-wrap:anywhere;}
+.jaw-list-state{font-size:.9rem;color:var(--muted);}
+.jaw-list-chevron{font-size:1.7rem;line-height:1;flex-shrink:0;}
+.jaw-list-body{display:flex;align-items:flex-start;gap:14px;min-width:0;}
+.jaw-list-photo{width:100px;height:110px;object-fit:cover;border-radius:12px;flex-shrink:0;}
+.jaw-list-details{flex:1;min-width:0;}
+.jaw-list-measures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;}
+.jaw-list-measures>div{padding:10px;border:1px solid var(--border);border-radius:10px;min-width:0;}
+.jaw-list-measures span,.jaw-list-detail span,.jaw-list-note span{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;}
+.jaw-list-measures strong{font-size:1.25rem;overflow-wrap:anywhere;}
+.jaw-list-measures strong small{font-size:.7rem;font-weight:normal;}
+.jaw-list-detail{margin-top:9px;overflow-wrap:anywhere;}
+.jaw-list-detail strong{font-weight:500;font-size:.95rem;}
+.jaw-list-note{margin-top:12px;padding-top:10px;border-top:1px solid var(--border);overflow-wrap:anywhere;}
+.jaw-list-note p{margin:0;font-size:.95rem;white-space:pre-wrap;}
+@media(max-width:390px){.jaw-list-photo{width:76px;height:92px}.jaw-list-card{padding:13px}.jaw-list-body{gap:9px}.jaw-list-measures{gap:5px}.jaw-list-measures>div{padding:7px}.jaw-list-measures strong{font-size:1.05rem}}
