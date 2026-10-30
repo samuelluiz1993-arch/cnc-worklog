@@ -239,12 +239,21 @@ ${f('Angolo profilo (°)','trProfile')}${f('Diametro bareno (mm)','trBarDiameter
 ${field('Tipo inserto (profilo completo / parziale)','iu_trInsert',u.trInsert)}<label>Penetrazione</label><select name="iu_trPenetration"><option value="">—</option><option value="radiale" ${u.trPenetration==='radiale'?'selected':''}>Radiale</option><option value="inclinata" ${u.trPenetration==='inclinata'?'selected':''}>Inclinata</option></select>${f('Angolo di penetrazione (°)','trAngle')}
 <h3>🧮 Calcolatore passate (teorico)</h3><p class="hint">Calcola la penetrazione radiale totale da diametro maggiore interno e preforo. Le passate proposte sono decrescenti; le ultime passate possono essere fissate.</p>
 ${f('Numero passate di taglio','trPasses')}${f('Numero ultime passate fisse','trLastCount')}${f('Profondità radiale ultime passate (mm)','trLastDepth')}${f('Profondità prima passata (mm, facoltativa)','trFirst')}${f('Passate a vuoto (non asportano)','trSpring')}
-<button type="button" onclick="calculateTrPasses()">🧮 Calcola distribuzione passate</button><div id="trPlanOutput" class="card" aria-live="polite"></div>
+<button type="button" onclick="calculateTrPasses()">🧮 Calcola distribuzione passate</button><div id="trPlanOutput" class="card" aria-live="polite"><p class="hint">Modifica un parametro oppure premi Calcola per vedere il piano aggiornato.</p></div>
 ${textfield('Passate realmente eseguite (es. 0,8; 0,6; 0,4...)','iu_trActualPasses',u.trActualPasses)}
 <label>Vibrazioni</label><select name="iu_trVibration">${[['','—'],['assenti','🟢 Assenti'],['leggere','🟡 Leggere'],['elevate','🔴 Elevate']].map(([v,l])=>`<option value="${v}" ${u.trVibration===v?'selected':''}>${l}</option>`).join('')}</select>
 <label>Evacuazione truciolo</label><select name="iu_trChips">${[['','—'],['buona','🟢 Buona'],['difficoltosa','🟡 Difficoltosa'],['problematica','🔴 Problematica']].map(([v,l])=>`<option value="${v}" ${u.trChips===v?'selected':''}>${l}</option>`).join('')}</select>
 ${textfield('Problemi riscontrati e soluzione adottata','iu_trTroubleSolution',u.trTroubleSolution)}<input type="hidden" name="iu_trCalculatedPlan" value="${esc(u.trCalculatedPlan||'')}"><p class="hint">La proposta calcolata è archiviata separatamente dalle passate effettive.</p></div>`}
 function updateTrGeometry(){const box=$('#trModule');if(!box)return;const get=k=>trNum(box.querySelector('[name=iu_'+k+']')?.value);const d=get('trBarDiameter'),l=get('trOverhang'),ld=$('#trLD');if(ld)ld.textContent='Rapporto L/D: '+(d>0&&l>=0?(l/d).toFixed(2):'—')+' (indicatore geometrico, non verifica di stabilità)';}
+// Aggiorna immediatamente il piano quando cambia un parametro che lo determina.
+// Non lasciare mai nel campo nascosto un vecchio piano relativo a dati diversi.
+const TR_PLAN_INPUTS=new Set(['trMajor','trBore','trPasses','trLastCount','trLastDepth','trFirst','trSpring']);
+function onTrPassInput(event){
+ const box=$('#trModule');if(!box||!event?.target||!box.contains(event.target))return;
+ const name=event.target.name||'';
+ if(!name.startsWith('iu_')||!TR_PLAN_INPUTS.has(name.slice(3)))return;
+ calculateTrPasses();
+}
 function calculateTrPasses(){const box=$('#trModule');if(!box)return;const read=k=>trNum(box.querySelector('[name=iu_'+k+']')?.value);const out=$('#trPlanOutput');const major=read('trMajor'),bore=read('trBore'),count=read('trPasses'),fixedCount=read('trLastCount'),fixedDepth=read('trLastDepth'),first=read('trFirst');const fixed=Number.isFinite(fixedCount)?fixedCount:0;const depth=Number.isFinite(fixedDepth)?fixedDepth:0;
  const error=m=>{out.textContent=m;box.querySelector('[name=iu_trCalculatedPlan]').value=''};
  if(!(major>bore&&bore>0))return error('Inserisci il diametro preforo e il diametro maggiore interno effettivo (maggiore del preforo).');
@@ -274,7 +283,7 @@ function renderInlineUsageEditor(){
  const u={...(inlineUsageIndex>=0?(activeTool.usages||[])[inlineUsageIndex]||{}:{}),...(inlineUsageDraft||{})};
  inlineUsageDraft=null;
  const isMill=usageKind()==='mill';const isDrill=usageKind()==='drill';const isThread=usageKind()==='thread';
- el.innerHTML=`<div class="card" oninput="updateInlineUsageCalc(event);updateTrGeometry();if(event.target.name==='iu_material')updateSmartToolHints()"><h3>${inlineUsageIndex>=0?'Modifica lavorazione':'Nuova lavorazione'}</h3>
+ el.innerHTML=`<div class="card" oninput="updateInlineUsageCalc(event);updateTrGeometry();onTrPassInput(event);if(event.target.name==='iu_material')updateSmartToolHints()" onchange="onTrPassInput(event)"><h3>${inlineUsageIndex>=0?'Modifica lavorazione':'Nuova lavorazione'}</h3>
  ${field('Nome lavorazione *','iu_title',u.title||'')}
  <label>Categoria lavorazione</label><select name="iu_usageCategory">${compatibleCategoryOptions(u.usageCategory)}</select>
  <label>Posizione lavorazione</label><select name="iu_workSide">${LIBRARY_SIDES.map(([v,l])=>`<option value="${v}" ${(u.workSide||activeTool.workSide)===v?'selected':''}>${l}</option>`).join('')}</select>
