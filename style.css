@@ -42,3 +42,6 @@
 .job-photos img{display:block;width:min(100%,340px);height:auto;max-height:360px;object-fit:contain;border-radius:13px;background:var(--bg);border:1px solid var(--border)}
 .job-operation-info{color:var(--muted);font-size:14px;margin-top:8px;line-height:1.6}
 .job-operation{border-left:4px solid var(--blue)}
+
+/* v0.10.3 Magazzino griffe */
+.jaw-photo{display:block;width:min(100%,340px);height:auto;max-height:360px;object-fit:contain;border-radius:12px;margin:12px 0;border:1px solid var(--border)}
